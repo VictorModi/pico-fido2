@@ -1,0 +1,68 @@
+name: "Build ESP32"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Cache ESP-IDF and Tools
+        id: cache-esp-idf
+        uses: actions/cache@v4
+        with:
+          path: ./esp-idf
+          key: ${{ runner.os }}-esp-idf-v5.5
+
+      - name: Ensure ESP-IDF Submodules are Up-to-Date
+        run: |
+          if [ ! -d "esp-idf" ]; then
+            echo "ESP-IDF directory not found (Cache miss). Cloning..."
+            git clone --recursive -b v5.5 https://github.com/espressif/esp-idf.git esp-idf
+          fi
+
+          if [ -d "esp-idf/.git" ] || [ -f "esp-idf/.git" ]; then
+            echo "Syncing internal submodules for ESP-IDF..."
+            cd esp-idf
+            git clean -fxd
+            git submodule foreach --recursive 'git clean -fxd'
+            git submodule update --init --recursive --force
+          fi
+
+      - name: Manually Add esp_tinyusb Component
+        run: |
+          mkdir -p components
+          cd components
+          wget "https://components.espressif.com/api/downloads/?object_type=component&object_id=00be25de-a274-43a4-a323-8fa024912251" -O esp_tinyusb.zip
+          unzip esp_tinyusb.zip
+          rm esp_tinyusb.zip
+
+      - name: Check tinycbor
+        run: find pico-keys-sdk/tinycbor -type f
+
+      - name: Build Firmware
+        run: |
+          chmod +x ./workflows/autobuild.sh
+          ./workflows/autobuild.sh esp32
+
+      - name: Upload ESP32-S3 Firmware Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pico-fido2-esp32s3-firmware
+          path: release/pico_fido_esp32-s3.bin
+
+      - name: Upload ESP32-S2 Firmware Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pico-fido2-esp32s2-firmware
+          path: release/pico_fido_esp32-s2.bin
+          
