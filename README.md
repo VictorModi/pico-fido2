@@ -139,6 +139,44 @@ After running `make`, the binary file `pico_fido2.uf2` will be generated. To loa
 
 To configure your device you can use the [picoforge desktop application ](https://github.com/librekeys/picoforge).
 
+## Build for ESP32
+
+Replace
+- `ESP_PRODUCT` with your SoC's name: e.g. `esp32s2` or `esp32s3`
+- `ESP_NAME` with it's full name: `ESP32-S2` or `ESP32-S3`
+
+Install ESP-IDF and toolchain
+
+```bash
+git clone --recursive https://github.com/espressif/esp-idf.git -b v5.5 --depth=1
+cd esp-idf
+./install.sh ESP_PRODUCT
+. ./export.sh
+cd ..
+```
+
+Then, you can build with:
+```bash
+idf.py set-target ESP_PRODUCT
+idf.py all
+cd build
+esptool.py --chip ESP_NAME merge_bin -o pico_fido_esp32.bin @flash_args
+```
+
+The binary file `pico_fido_esp32.bin` will be generated. To load this onto your board:
+
+1. Put the board into loading mode by holding the `BOOT` button while plugging it in.
+2. For Windows users, install drivers with [this guide](https://github.com/espressif/esp-win-usb-drivers#documentation)
+3. Go to https://espressif.github.io/esptool-js/
+4. Click on Connect and choose the board
+5. Choose the `pico_fido_esp32.bin` file
+6. Set Flash Address=0x0000
+7. Click Program
+8. Press RST/Reset button on the board. A blinking LED will indicate that the device is ready to work.
+
+To configure your device you can use the [picoforge desktop application ](https://github.com/librekeys/picoforge).
+
+
 ## Drivers
 
 Pico FIDO2 uses the `HID` driver for FIDO and `CCID` for OpenPGP, both present in all major operating systems. It should be detected by all OS and browser/applications just like normal USB FIDO keys and smartcards.
